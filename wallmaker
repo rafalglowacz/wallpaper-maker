@@ -84,7 +84,7 @@ function makeWallpaper(string $origPath, int $destinationWidth, int $destination
         $origHeight,
     );
 
-    imagejpeg($combined, $destinationPath);
+    imagejpeg($combined, $destinationPath, 90);
 }
 
 /**
