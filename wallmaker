@@ -1,0 +1,146 @@
+#!/usr/bin/env php
+<?php
+
+$sourceDir = rtrim($argv[1], '/');
+$destinationWidth = $argv[2];
+$destinationHeight = $argv[3];
+$delay = $argv[4] ?? 60;
+
+if ($delay) {
+    echo "Waiting $delay seconds...\n";
+    sleep($delay);
+}
+
+foreach (glob("$sourceDir/*") as $path) {
+    if (preg_match('/\.(jpe?g|png)$/i', $path)) {
+        makeWallpaper($path, $destinationWidth, $destinationHeight);
+        echo '.';
+    }
+}
+
+function makeWallpaper(string $origPath, int $destinationWidth, int $destinationHeight)
+{
+    $destinationRatio = $destinationWidth / $destinationHeight;
+    $combined = imagecreatetruecolor($destinationWidth, $destinationHeight);
+    $destinationDir = dirname($origPath) . ' - adjusted';
+    $destinationFilename = 'adjusted - ' . basename($origPath); // Just a safeguard again dumb mistakes to avoid overwriting anything.
+    $destinationPath = "$destinationDir/$destinationFilename";
+
+    if (file_exists($destinationPath)) {
+        return;
+    }
+
+    if (preg_match('/\.jpe?g$/i', $origPath)) {
+        $origImg = imagecreatefromjpeg($origPath);
+    } elseif (preg_match('/\.png$/i', $origPath)) {
+        $origImg = imagecreatefrompng($origPath);
+    } else {
+        throw new Exception('Unknown extension.');
+    }
+
+    if ($origImg === false) {
+        return;
+    }
+
+    $origWidth = imagesx($origImg);
+    $origHeight = imagesy($origImg);
+    $origRatio = imagesx($origImg) / imagesy($origImg);
+
+    $adjustedWidth = $destinationRatio > $origRatio
+        ? $destinationHeight / $origHeight * $origWidth
+        : $destinationWidth / $origWidth * $origWidth;
+
+    $adjustedHeight = $destinationRatio > $origRatio
+        ? $destinationHeight / $origHeight * $origHeight
+        : $destinationWidth / $origWidth * $origHeight;
+
+    $blurredBg = imagecreatetruecolor($origWidth, $origHeight);
+    imagecopy($blurredBg, $origImg, 0, 0, 0, 0, $origWidth, $origHeight);
+    $blurredBg = imagescale($blurredBg, $destinationWidth, $destinationHeight);
+    $blurredBg = blur($blurredBg, 5);
+
+    imagecopymerge(
+        $combined,
+        $blurredBg,
+        0,
+        0,
+        0,
+        0,
+        $destinationWidth,
+        $destinationHeight,
+        100,
+    );
+
+    imagecopyresized(
+        $combined,
+        $origImg,
+        ($destinationWidth - $adjustedWidth) / 2,
+        ($destinationHeight - $adjustedHeight) / 2,
+        0,
+        0,
+        $adjustedWidth,
+        $adjustedHeight,
+        $origWidth,
+        $origHeight,
+    );
+
+    imagejpeg($combined, $destinationPath);
+}
+
+/**
+ * Strong Blur
+ *
+ * @param resource $gdImageResource
+ * @param int $blurFactor optional
+ *  This is the strength of the blur
+ *  0 = no blur, 3 = default, anything over 5 is extremely blurred
+ * @return resource image resource
+ * @author Martijn Frazer, idea based on http://stackoverflow.com/a/20264482
+ */
+function blur($gdImageResource, int $blurFactor = 3)
+{
+    // blurFactor has to be an integer
+    $blurFactor = round($blurFactor);
+
+    $originalWidth = imagesx($gdImageResource);
+    $originalHeight = imagesy($gdImageResource);
+
+    $smallestWidth = ceil($originalWidth * pow(0.5, $blurFactor));
+    $smallestHeight = ceil($originalHeight * pow(0.5, $blurFactor));
+
+    // for the first run, the previous image is the original input
+    $prevImage = $gdImageResource;
+    $prevWidth = $originalWidth;
+    $prevHeight = $originalHeight;
+
+    // scale way down and gradually scale back up, blurring all the way
+    for ($i = 0; $i < $blurFactor; $i += 1) {
+        // determine dimensions of next image
+        $nextWidth = $smallestWidth * pow(2, $i);
+        $nextHeight = $smallestHeight * pow(2, $i);
+
+        // resize previous image to next size
+        $nextImage = imagecreatetruecolor($nextWidth, $nextHeight);
+        imagecopyresized($nextImage, $prevImage, 0, 0, 0, 0,
+            $nextWidth, $nextHeight, $prevWidth, $prevHeight);
+
+        // apply blur filter
+        imagefilter($nextImage, IMG_FILTER_GAUSSIAN_BLUR);
+
+        // now the new image becomes the previous image for the next step
+        $prevImage = $nextImage;
+        $prevWidth = $nextWidth;
+        $prevHeight = $nextHeight;
+    }
+
+    // scale back to original size and blur one more time
+    imagecopyresized($gdImageResource, $nextImage,
+        0, 0, 0, 0, $originalWidth, $originalHeight, $nextWidth, $nextHeight);
+    imagefilter($gdImageResource, IMG_FILTER_GAUSSIAN_BLUR);
+
+    // clean up
+    imagedestroy($prevImage);
+
+    // return result
+    return $gdImageResource;
+}
