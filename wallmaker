@@ -71,7 +71,7 @@ function makeWallpaper(string $origPath, int $destinationWidth, int $destination
         100,
     );
 
-    imagecopyresized(
+    imagecopyresampled(
         $combined,
         $origImg,
         ($destinationWidth - $adjustedWidth) / 2,
