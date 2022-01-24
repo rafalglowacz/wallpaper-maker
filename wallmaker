@@ -5,6 +5,7 @@ $sourceDir = rtrim($argv[1], '/');
 $destinationWidth = $argv[2];
 $destinationHeight = $argv[3];
 $delay = $argv[4] ?? 60;
+$force = ($argv[5] ?? null) === '--force';
 
 if ($delay) {
     echo "Waiting $delay seconds...\n";
@@ -13,12 +14,12 @@ if ($delay) {
 
 foreach (glob("$sourceDir/*") as $path) {
     if (preg_match('/\.(jpe?g|png)$/i', $path)) {
-        makeWallpaper($path, $destinationWidth, $destinationHeight);
+        makeWallpaper($path, $destinationWidth, $destinationHeight, $force);
         echo '.';
     }
 }
 
-function makeWallpaper(string $origPath, int $destinationWidth, int $destinationHeight)
+function makeWallpaper(string $origPath, int $destinationWidth, int $destinationHeight, bool $force = false)
 {
     $destinationRatio = $destinationWidth / $destinationHeight;
     $combined = imagecreatetruecolor($destinationWidth, $destinationHeight);
@@ -26,7 +27,7 @@ function makeWallpaper(string $origPath, int $destinationWidth, int $destination
     $destinationFilename = 'adjusted - ' . basename($origPath); // Just a safeguard again dumb mistakes to avoid overwriting anything.
     $destinationPath = "$destinationDir/$destinationFilename";
 
-    if (file_exists($destinationPath)) {
+    if (!$force && file_exists($destinationPath)) {
         return;
     }
 
