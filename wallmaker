@@ -12,10 +12,25 @@ if ($delay) {
     sleep($delay);
 }
 
-foreach (glob("$sourceDir/*") as $path) {
+$paths = glob("$sourceDir/*");
+$percentageReported = [];
+$lastReportStamp = 0;
+
+foreach ($paths as $i => $path) {
     if (preg_match('/\.(jpe?g|png)$/i', $path)) {
         makeWallpaper($path, $destinationWidth, $destinationHeight, $force);
-        echo '.';
+    }
+
+    $percentage = round($i / count($paths) * 100);
+
+    if (
+        $percentage
+        && !in_array($percentage, $percentageReported)
+        && ($percentage % 5 === 0 || time() - $lastReportStamp > 5)
+    ) {
+        echo "$percentage%\n";
+        $percentageReported[] = $percentage;
+        $lastReportStamp = time();
     }
 }
 
