@@ -17,7 +17,7 @@ $percentageReported = [];
 $lastReportStamp = 0;
 
 foreach ($paths as $i => $path) {
-    if (preg_match('/\.(jpe?g|png)$/i', $path)) {
+    if (preg_match('/\.(jpe?g|png|webp)$/i', $path)) {
         makeWallpaper($path, $destinationWidth, $destinationHeight, $force);
     }
 
@@ -50,6 +50,8 @@ function makeWallpaper(string $origPath, int $destinationWidth, int $destination
         $origImg = imagecreatefromjpeg($origPath);
     } elseif (preg_match('/\.png$/i', $origPath)) {
         $origImg = imagecreatefrompng($origPath);
+    } elseif (preg_match('/\.webp$/i', $origPath)) {
+        $origImg = imagecreatefromwebp($origPath);
     } else {
         throw new Exception('Unknown extension.');
     }
