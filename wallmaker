@@ -34,6 +34,9 @@ foreach ($paths as $i => $path) {
     }
 }
 
+`find ~/Pictures/Tapety\ -\ adjusted -type f -mtime -30 -print0 | xargs -0 -I _ cp -n _ ~/Pictures/Tapety\ -\ nowe`;
+`find ~/Pictures/Tapety\ -\ nowe -type f -mtime +30 -print0 | xargs -0 -I _ rm _`;
+
 function makeWallpaper(string $origPath, int $destinationWidth, int $destinationHeight, bool $force = false)
 {
     $destinationRatio = $destinationWidth / $destinationHeight;
